@@ -1,0 +1,111 @@
+---
+- name: Verify
+  hosts: instance
+  gather_facts: false
+  vars:
+    ssh_test_user: "ansible_test"
+    ssh_test_port: "{{ sshd_port | default(22) }}"
+    ssh_test_key: "/tmp/ansible_test_key"
+  tasks:
+    - name: Ensure ssh is active
+      ansible.builtin.service_facts:
+
+    - name: Assert ssh service is running
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.services['ssh.service'].state == 'running'
+        fail_msg: "ssh is not running!"
+        success_msg: "ssh is active and running."
+
+    - name: Generate temporary test SSH key
+      ansible.builtin.command: ssh-keygen -t ed25519 -f {{ ssh_test_key }} -N ""
+      args:
+        creates: "{{ ssh_test_key }}"
+
+    - name: Create a test user
+      ansible.builtin.user:
+        name: "{{ ssh_test_user }}"
+        shell: /bin/bash
+        state: present
+
+    - name: Authorize test key for SSH login
+      ansible.builtin.file:
+        path: "/home/{{ ssh_test_user }}/.ssh"
+        state: directory
+        mode: "0700"
+        owner: "{{ ssh_test_user }}"
+
+    - name: Read public key in container
+      ansible.builtin.command:
+        cmd: cat {{ ssh_test_key }}.pub
+      register: pubkey_in_container
+      changed_when: false
+
+
+    - name: Install authorized key
+      ansible.builtin.copy:
+        dest: "/home/{{ ssh_test_user }}/.ssh/authorized_keys"
+        content: "{{ pubkey_in_container.stdout }}"
+        owner: "{{ ssh_test_user }}"
+        mode: "0600"
+
+    - name: Wait for SSH port to be available
+      ansible.builtin.wait_for:
+        port: "{{ ssh_test_port }}"
+        delay: 2
+        timeout: 15
+
+    - name: Test SSH connection with key
+      ansible.builtin.command:
+        cmd: >
+          ssh -i {{ ssh_test_key }}
+          -o StrictHostKeyChecking=no
+          -o BatchMode=yes
+          -p {{ ssh_test_port }}
+          {{ ssh_test_user }}@localhost echo "SSH_OK"
+      register: ssh_test_result
+      changed_when: false
+
+    - name: Assert SSH key authentication works
+      ansible.builtin.assert:
+        that:
+          - "'SSH_OK' in ssh_test_result.stdout"
+        fail_msg: "SSH login with key failed"
+        success_msg: "SSH key login successful"
+
+    - name: Test password authentication is disabled
+      ansible.builtin.command:
+        cmd: >
+          sshpass -p 'fakepassword'
+          ssh -o StrictHostKeyChecking=no
+          -o PreferredAuthentications=password
+          -p {{ ssh_test_port }}
+          {{ ssh_test_user }}@localhost echo "SHOULD_NOT_WORK"
+      register: ssh_pass_result
+      failed_when: false
+      changed_when: false
+
+    - name: Assert password login is refused
+      ansible.builtin.assert:
+        that:
+          - ssh_pass_result.rc != 0
+        fail_msg: "Password authentication is still enabled"
+        success_msg: "Password authentication correctly refused"
+
+    - name: Test root SSH access is disabled
+      ansible.builtin.command:
+        cmd: >
+          ssh -o StrictHostKeyChecking=no
+          -o BatchMode=yes
+          -p {{ ssh_test_port }}
+          root@localhost echo "ROOT_OK"
+      register: ssh_root_result
+      failed_when: false
+      changed_when: false
+
+    - name: Assert root login is refused
+      ansible.builtin.assert:
+        that:
+          - ssh_root_result.rc != 0
+        fail_msg: "Root SSH login still allowed"
+        success_msg: "Root SSH login correctly disabled"

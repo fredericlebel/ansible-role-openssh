@@ -1,0 +1,11 @@
+---
+- name: Converge
+  hosts: all
+  gather_facts: true
+  tasks:
+    - name: Apply role under test
+      ansible.builtin.include_role:
+        name: fredericlebel.openssh
+      vars:
+        openssh_allow_users:
+          - ansible_test

@@ -1,0 +1,26 @@
+{{ ansible_managed | comment }}
+
+Port {{ openssh_port }}
+ListenAddress {{ openssh_listen_address }}
+PermitRootLogin {{ openssh_permit_root_login }}
+PasswordAuthentication {{ openssh_password_authentication }}
+PubkeyAuthentication {{ openssh_pubkey_authentication }}
+PermitEmptyPasswords {{ openssh_permit_empty_passwords }}
+MaxAuthTries {{ openssh_max_auth_tries }}
+LoginGraceTime {{ openssh_login_grace_time }}s
+{% if openssh_allow_users %}
+AllowUsers {{ openssh_allow_users | join(' ') }}
+{% endif %}
+{% if openssh_allow_groups %}
+AllowGroups {{ openssh_allow_groups | join(' ') }}
+{% endif %}
+X11Forwarding {{ openssh_x11_forwarding }}
+AllowTcpForwarding {{ openssh_tcp_forwarding }}
+Compression {{ openssh_compression }}
+LogLevel {{ openssh_log_level }}
+ClientAliveInterval {{ openssh_client_alive_interval }}
+ClientAliveCountMax {{ openssh_client_alive_count_max }}
+UsePAM {{ openssh_use_pam }}
+Banner {{ openssh_banner }}
+
+{{ ansible_managed | comment }}

@@ -1,0 +1,19 @@
+---
+openssh_port: 22
+openssh_listen_address: 0.0.0.0
+openssh_permit_root_login: "no"
+openssh_password_authentication: "no"
+openssh_pubkey_authentication: "yes"
+openssh_permit_empty_passwords: "no"
+openssh_max_auth_tries: 3
+openssh_login_grace_time: 30
+openssh_allow_users: []
+openssh_allow_groups: []
+openssh_x11_forwarding: "no"
+openssh_tcp_forwarding: "no"
+openssh_compression: "no"
+openssh_log_level: "VERBOSE"
+openssh_client_alive_interval: 300
+openssh_client_alive_count_max: 2
+openssh_use_pam: "yes"
+openssh_banner: "/etc/issue.net"
