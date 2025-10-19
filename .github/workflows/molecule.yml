@@ -1,0 +1,36 @@
+---
+name: Test Ansible Role with Molecule
+
+on:
+  push:
+    branches:
+      - main
+      - 'feature/**'
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.13'
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Install project dependencies via uv
+        run: uv sync
+
+      - name: Check Podman version
+        run: podman --version
+
+      - name: Run Molecule tests
+        run: |
+          uv run molecule test
